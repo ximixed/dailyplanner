@@ -5,6 +5,7 @@ import WeekStrip from "./components/WeekStrip.jsx";
 import TaskList from "./components/TaskList.jsx";
 import ActivityList from "./components/ActivityList.jsx";
 import NoteList from "./components/NoteList.jsx";
+import logoUrl from "../images/DP Calendar Planner Icon.png";
 
 export default function App() {
   const today = toISO(new Date());
@@ -242,7 +243,7 @@ export default function App() {
     <div className="wrap">
       <aside className="sidebar">
         <div className="brand">
-          <img src="/images/DP Calendar Planner Icon.png" alt="Daily Planner logo" className="brand-logo" />
+          <img src={logoUrl} alt="Daily Planner logo" className="brand-logo" />
           <div className="brand-text">
             <strong>Daily Planner</strong>
             <small>Focus board</small>
