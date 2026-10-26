@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useLocalStorage from "./utils/useLocalStorage.js";
 import { addDays, fromISO, toISO, uid } from "./utils/dates.js";
 import WeekStrip from "./components/WeekStrip.jsx";
@@ -9,12 +9,17 @@ import NoteList from "./components/NoteList.jsx";
 export default function App() {
   const today = toISO(new Date());
   const [current, setCurrent] = useState(today);
+  const [now, setNow] = useState(new Date());
   const [tasks, setTasks] = useLocalStorage("planner:tasks", []);
   const [acts, setActs] = useLocalStorage("planner:acts", []);
   const [notes, setNotes] = useLocalStorage("planner:notes", []);
-  const [theme, setTheme] = useState(null); // null = follow system
+  const [selectedView, setSelectedView] = useState("overview");
+  const [theme, setTheme] = useLocalStorage("planner:theme", "dark");
+  const contentRef = useRef(null);
 
   const dayTasks = tasks.filter((t) => t.date === current);
+  const dayActs = acts.filter((a) => a.date === current);
+  const dayNotes = notes.filter((n) => n.date === current);
   const done = dayTasks.filter((t) => t.done).length;
   const pct = dayTasks.length ? Math.round((done / dayTasks.length) * 100) : 0;
   const d = fromISO(current);
@@ -24,59 +29,290 @@ export default function App() {
     : current === addDays(today, -1) ? "Yesterday"
     : d.toLocaleDateString(undefined, { weekday: "long" });
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const timeLabel = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  const upcomingActs = useMemo(() =>
+    [...acts]
+      .filter((a) => a.date >= today)
+      .sort((a, b) => `${a.date} ${a.startTime || "00:00"}`.localeCompare(`${b.date} ${b.startTime || "00:00"}`))
+      .slice(0, 4), [acts, today]);
+
+  const topTasks = useMemo(() =>
+    [...dayTasks]
+      .filter((t) => !t.done)
+      .sort((a, b) => (a.pri || "med").localeCompare(b.pri || "med"))
+      .slice(0, 3), [dayTasks]);
+
+  const todaySummary = {
+    totalTasks: dayTasks.length,
+    completedTasks: done,
+    upcomingActivities: dayActs.length,
+    notesCount: dayNotes.length,
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
+  }, [theme]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 900 && contentRef.current) {
+      contentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [selectedView]);
+
   const toggleTheme = () => {
-    const dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-    const next = dark ? "light" : "dark";
+    const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    document.documentElement.setAttribute("data-theme", next);
+  };
+
+  const normalizeTask = (raw, fallbackDate = current) => {
+    const payload = typeof raw === "string" ? { title: raw, priority: "med", category: "School" } : raw || {};
+    return {
+      id: payload.id || uid(),
+      date: payload.date || fallbackDate,
+      done: !!payload.done,
+      title: String(payload.title || payload.text || "New task").trim() || "New task",
+      description: payload.description || "",
+      priority: payload.priority || payload.pri || "med",
+      category: payload.category || "School",
+      duration: Number(payload.duration) || 0,
+      dueDate: payload.dueDate || fallbackDate,
+      dueTime: payload.dueTime || payload.time || "",
+      reminder: payload.reminder || "",
+      subtasks: Array.isArray(payload.subtasks) ? payload.subtasks : [],
+    };
+  };
+
+  const normalizeActivity = (raw, fallbackDate = current) => {
+    const payload = typeof raw === "string" ? { title: raw, kind: "class" } : raw || {};
+    return {
+      id: payload.id || uid(),
+      date: payload.date || fallbackDate,
+      title: String(payload.title || payload.text || "New activity").trim() || "New activity",
+      kind: payload.kind || "class",
+      time: payload.time || payload.startTime || "",
+      startTime: payload.startTime || payload.time || "",
+    };
+  };
+
+  const normalizeNote = (raw, fallbackDate = current) => {
+    const payload = typeof raw === "string" ? { text: raw } : raw || {};
+    return {
+      id: payload.id || uid(),
+      date: payload.date || fallbackDate,
+      text: String(payload.text || payload.title || "New note").trim() || "New note",
+      createdAt: payload.createdAt || new Date().toISOString(),
+    };
+  };
+
+  const addTask = (task) => {
+    setTasks((prev) => [...prev, normalizeTask(task, current)]);
+  };
+
+  const updateTask = (id, patch) => setTasks((prev) => prev.map((t) => (t.id === id ? normalizeTask({ ...t, ...patch }, t.date) : t)));
+  const deleteTask = (id) => setTasks((prev) => prev.filter((t) => t.id !== id));
+  const moveTask = (taskId, nextDate = addDays(current, 1)) => setTasks((prev) => prev.map((t) => (t.id === taskId ? normalizeTask({ ...t, date: nextDate, dueDate: nextDate }, nextDate) : t)));
+  const addActivity = (activity) => setActs((prev) => [...prev, normalizeActivity(activity, current)]);
+  const deleteActivity = (id) => setActs((prev) => prev.filter((a) => a.id !== id));
+
+  const addNote = (note) => setNotes((prev) => [...prev, normalizeNote(note, current)]);
+  const deleteNote = (id) => setNotes((prev) => prev.filter((n) => n.id !== id));
+
+  const renderOverview = () => (
+    <div className="overview-shell">
+      <div className="overview-cards">
+        <div className="summary-card accent">
+          <span>Total tasks</span>
+          <strong>{todaySummary.totalTasks}</strong>
+          <small>{todaySummary.completedTasks} completed</small>
+        </div>
+        <div className="summary-card">
+          <span>Completed</span>
+          <strong>{todaySummary.completedTasks}</strong>
+          <small>{pct}% of day</small>
+        </div>
+        <div className="summary-card">
+          <span>Activities</span>
+          <strong>{todaySummary.upcomingActivities}</strong>
+          <small>scheduled</small>
+        </div>
+        <div className="summary-card">
+          <span>Notes</span>
+          <strong>{todaySummary.notesCount}</strong>
+          <small>saved today</small>
+        </div>
+      </div>
+
+      <div className="focus-grid">
+        <div className="panel-block">
+          <h3>Daily focus</h3>
+          {topTasks.length === 0 ? (
+            <div className="empty-box">No active priorities yet. Add a task to get started.</div>
+          ) : (
+            <ul className="focus-list">
+              {topTasks.map((task, index) => (
+                <li key={task.id}>
+                  <span className="focus-index">{index + 1}</span>
+                  <div>
+                    <strong>{task.title}</strong>
+                    <small>{task.priority || "med"} priority</small>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="panel-block">
+          <h3>Upcoming schedule</h3>
+          {upcomingActs.length === 0 ? (
+            <div className="empty-box">No upcoming activities.</div>
+          ) : (
+            <ul className="mini-list">
+              {upcomingActs.map((activity) => (
+                <li key={activity.id}>
+                  <span className="tag tag-blue">{activity.kind}</span>
+                  <div>
+                    <strong>{activity.title}</strong>
+                    <small>{activity.date} {activity.startTime ? `• ${activity.startTime}` : ""}</small>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div className="dashboard-bottom">
+        <TaskList
+          tasks={dayTasks}
+          onAdd={(task) => addTask(task)}
+          onUpdate={updateTask}
+          onToggle={(id) => updateTask(id, { done: !dayTasks.find((t) => t.id === id)?.done })}
+          onDelete={deleteTask}
+          onMove={(taskId) => moveTask(taskId, addDays(current, 1))}
+          onClear={() => setTasks((prev) => prev.filter((t) => !(t.date === current && t.done)))}
+        />
+        <ActivityList
+          acts={dayActs}
+          onAdd={addActivity}
+          onUpdate={(id, patch) => setActs((prev) => prev.map((a) => (a.id === id ? normalizeActivity({ ...a, ...patch }, a.date) : a)))}
+          onDelete={deleteActivity}
+        />
+        <NoteList
+          notes={dayNotes}
+          onAdd={addNote}
+          onUpdate={(id, patch) => setNotes((prev) => prev.map((n) => (n.id === id ? normalizeNote({ ...n, ...patch }, n.date) : n)))}
+          onDelete={deleteNote}
+        />
+      </div>
+    </div>
+  );
+
+  const renderSelectedSection = () => {
+    if (selectedView === "overview") return renderOverview();
+    if (selectedView === "tasks") {
+      return (
+        <TaskList
+          tasks={dayTasks}
+          onAdd={(task) => addTask(task)}
+          onUpdate={updateTask}
+          onToggle={(id) => updateTask(id, { done: !dayTasks.find((t) => t.id === id)?.done })}
+          onDelete={deleteTask}
+          onMove={(taskId) => moveTask(taskId, addDays(current, 1))}
+          onClear={() => setTasks((prev) => prev.filter((t) => !(t.date === current && t.done)))}
+        />
+      );
+    }
+    if (selectedView === "activities") {
+      return <ActivityList acts={dayActs} onAdd={addActivity} onUpdate={(id, patch) => setActs((prev) => prev.map((a) => (a.id === id ? normalizeActivity({ ...a, ...patch }, a.date) : a)))} onDelete={deleteActivity} />;
+    }
+    if (selectedView === "notes") {
+      return <NoteList notes={dayNotes} onAdd={addNote} onUpdate={(id, patch) => setNotes((prev) => prev.map((n) => (n.id === id ? normalizeNote({ ...n, ...patch }, n.date) : n)))} onDelete={deleteNote} />;
+    }
+    return renderOverview();
   };
 
   return (
     <div className="wrap">
-      <header>
-        <div>
-          <h1>{title}</h1>
-          <div className="sub">
-            {d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+      <aside className="sidebar">
+        <div className="brand">
+          <img src="/images/DP Calendar Planner Icon.png" alt="Daily Planner logo" className="brand-logo" />
+          <div className="brand-text">
+            <strong>Daily Planner</strong>
+            <small>Focus board</small>
           </div>
         </div>
-        <div className="nav">
-          <button className="btn" aria-label="Previous day" onClick={() => setCurrent(addDays(current, -1))}>‹</button>
-          <button className="btn primary" onClick={() => setCurrent(today)}>Today</button>
-          <button className="btn" aria-label="Next day" onClick={() => setCurrent(addDays(current, 1))}>›</button>
-          <button className="btn" aria-label="Toggle dark mode" onClick={toggleTheme}>◐</button>
+
+        <nav className="side-nav" aria-label="Sidebar navigation">
+          {[
+            { id: "overview", label: "Overview" },
+            { id: "tasks", label: "Tasks" },
+            { id: "activities", label: "Activities" },
+            { id: "notes", label: "Notes" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              className={selectedView === item.id ? "nav-item active" : "nav-item"}
+              type="button"
+              onClick={() => setSelectedView(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="side-panel">
+          <span className="panel-label">Today</span>
+          <strong>{dayTasks.length}</strong>
+          <small>tasks planned</small>
         </div>
-      </header>
 
-      <WeekStrip current={current} onSelect={setCurrent} tasks={tasks} acts={acts} />
+        <div className="side-panel muted">
+          <span className="panel-label">Progress</span>
+          <strong>{pct}%</strong>
+          <small>{done} completed</small>
+        </div>
+      </aside>
 
-      <div className="prog" aria-hidden="true"><div style={{ width: pct + "%" }} /></div>
-      <div className="sub">
-        {dayTasks.length === 0 ? "No tasks planned for this day."
-          : done === dayTasks.length ? `All ${dayTasks.length} tasks done.`
-          : `${dayTasks.length - done} of ${dayTasks.length} tasks left.`}
-      </div>
+      <main className="main-panel">
+        <header>
+          <div className="header-main">
+            <h1>{title}</h1>
+            <div className="sub">
+              {d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+            </div>
+          </div>
+          <div className="header-tools">
+            <div className="nav top-controls">
+              <div className="clock-box" aria-live="polite">
+                <span>Time</span>
+                <strong>{timeLabel}</strong>
+              </div>
+              <button className="btn" aria-label="Previous day" onClick={() => setCurrent(addDays(current, -1))}>‹</button>
+              <button className="btn primary" onClick={() => setCurrent(today)}>Today</button>
+              <button className="btn" aria-label="Next day" onClick={() => setCurrent(addDays(current, 1))}>›</button>
+              <button className="btn" aria-label="Toggle dark mode" onClick={toggleTheme}>◐</button>
+            </div>
+          </div>
+        </header>
 
-      <div className="cols">
-        <TaskList
-          tasks={dayTasks}
-          onAdd={(text, pri) => setTasks([...tasks, { id: uid(), date: current, text, pri, done: false }])}
-          onToggle={(id) => setTasks(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))}
-          onDelete={(id) => setTasks(tasks.filter((t) => t.id !== id))}
-          onMove={() => setTasks(tasks.map((t) => (t.date === current && !t.done ? { ...t, date: addDays(current, 1) } : t)))}
-          onClear={() => setTasks(tasks.filter((t) => !(t.date === current && t.done)))}
-        />
-        <ActivityList
-          acts={acts.filter((a) => a.date === current)}
-          onAdd={(title, kind, time) => setActs([...acts, { id: uid(), date: current, title, kind, time }])}
-          onDelete={(id) => setActs(acts.filter((a) => a.id !== id))}
-        />
-        <NoteList
-          notes={notes.filter((n) => n.date === current)}
-          onAdd={(text) => setNotes([...notes, { id: uid(), date: current, text }])}
-          onDelete={(id) => setNotes(notes.filter((n) => n.id !== id))}
-        />
-      </div>
+        <WeekStrip current={current} onSelect={setCurrent} tasks={tasks} acts={acts} />
+
+        <div className="prog" aria-hidden="true"><div style={{ width: pct + "%" }} /></div>
+        <div className="sub">
+          {dayTasks.length === 0 ? "No tasks planned for this day."
+            : done === dayTasks.length ? `All ${dayTasks.length} tasks done.`
+            : `${dayTasks.length - done} of ${dayTasks.length} tasks left.`}
+        </div>
+
+        <div ref={contentRef} className={selectedView === "overview" ? "overview-layout" : "single-panel"}>{renderSelectedSection()}</div>
+      </main>
     </div>
   );
 }
