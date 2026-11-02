@@ -117,7 +117,7 @@ export default function TaskList({ tasks, onAdd, onUpdate, onToggle, onDelete, o
 
   return (
     <section aria-labelledby="h-tasks">
-      <h2 id="h-tasks">Tasks{tasks.length > 0 && <span>{done}/{tasks.length} done</span>}</h2>
+      <h2 id="h-tasks"><span className="section-icon task-icon">✓</span>Tasks{tasks.length > 0 && <span>{done}/{tasks.length} done</span>}</h2>
       <div className="tools compact-tools" style={{ marginBottom: 12 }}>
         <button type="button" className={filter === "all" ? "btn primary" : "btn"} onClick={() => setFilter("all")}>All</button>
         <button type="button" className={filter === "active" ? "btn primary" : "btn"} onClick={() => setFilter("active")}>Active</button>

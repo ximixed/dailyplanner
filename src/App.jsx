@@ -5,7 +5,45 @@ import WeekStrip from "./components/WeekStrip.jsx";
 import TaskList from "./components/TaskList.jsx";
 import ActivityList from "./components/ActivityList.jsx";
 import NoteList from "./components/NoteList.jsx";
-import logoUrl from "../images/DP Calendar Planner Icon.png";
+
+const Icon = ({ name, className = "" }) => {
+  const common = { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+
+  const icons = {
+    overview: (
+      <svg {...common}><path d="M4 11.5 12 4l8 7.5" /><path d="M6.5 9.5V19h11v-9.5" /><path d="M10 19v-6h4v6" /></svg>
+    ),
+    tasks: (
+      <svg {...common}><path d="M8 7.5h10" /><path d="M8 12h10" /><path d="M8 16.5h10" /><path d="M5 7.5h.01" /><path d="M5 12h.01" /><path d="M5 16.5h.01" /></svg>
+    ),
+    activities: (
+      <svg {...common}><path d="M5 18V8" /><path d="M10 18V5" /><path d="M15 18v-9" /><path d="M20 18v-6" /></svg>
+    ),
+    notes: (
+      <svg {...common}><path d="M7 4.5h8l4 4v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" /><path d="M15 4.5v4h4" /><path d="M8 12h8" /><path d="M8 16h8" /></svg>
+    ),
+    check: (
+      <svg {...common}><path d="M5 12.5 9.5 17 19 7.5" /></svg>
+    ),
+    calendar: (
+      <svg {...common}><rect x="3.5" y="5.5" width="17" height="15" rx="2" /><path d="M7.5 3.5v4" /><path d="M16.5 3.5v4" /><path d="M3.5 9.5h17" /></svg>
+    ),
+    focus: (
+      <svg {...common}><path d="M10 4.5h4" /><path d="M12 4.5v6" /><path d="M6.5 18.5a5.5 5.5 0 0 1 11 0" /><path d="M8 15.5h8" /></svg>
+    ),
+    spark: (
+      <svg {...common}><path d="M12 2.5v5" /><path d="M12 16.5v5" /><path d="M2.5 12h5" /><path d="M16.5 12h5" /><path d="M5.5 5.5l3.5 3.5" /><path d="M15 15l3.5 3.5" /><path d="M5.5 18.5l3.5-3.5" /><path d="M15 9l3.5-3.5" /></svg>
+    ),
+    clock: (
+      <svg {...common}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5v5l3 2" /></svg>
+    ),
+    file: (
+      <svg {...common}><path d="M7 4.5h7l4 4v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" /><path d="M14 4.5v4h4" /></svg>
+    )
+  };
+
+  return icons[name] || icons.tasks;
+};
 
 export default function App() {
   const today = toISO(new Date());
@@ -71,6 +109,8 @@ export default function App() {
     setTheme(next);
   };
 
+  const themeGlyph = theme === "dark" ? "☀" : "☾";
+
   const normalizeTask = (raw, fallbackDate = current) => {
     const payload = typeof raw === "string" ? { title: raw, priority: "med", category: "School" } : raw || {};
     return {
@@ -128,21 +168,25 @@ export default function App() {
     <div className="overview-shell">
       <div className="overview-cards">
         <div className="summary-card accent">
+          <div className="summary-icon"><Icon name="tasks" /></div>
           <span>Total tasks</span>
           <strong>{todaySummary.totalTasks}</strong>
           <small>{todaySummary.completedTasks} completed</small>
         </div>
         <div className="summary-card">
+          <div className="summary-icon green"><Icon name="check" /></div>
           <span>Completed</span>
           <strong>{todaySummary.completedTasks}</strong>
           <small>{pct}% of day</small>
         </div>
         <div className="summary-card">
+          <div className="summary-icon purple"><Icon name="calendar" /></div>
           <span>Activities</span>
           <strong>{todaySummary.upcomingActivities}</strong>
           <small>scheduled</small>
         </div>
         <div className="summary-card">
+          <div className="summary-icon amber"><Icon name="file" /></div>
           <span>Notes</span>
           <strong>{todaySummary.notesCount}</strong>
           <small>saved today</small>
@@ -151,7 +195,10 @@ export default function App() {
 
       <div className="focus-grid">
         <div className="panel-block">
-          <h3>Daily focus</h3>
+          <div className="panel-header">
+            <span className="panel-icon"><Icon name="focus" /></span>
+            <h3>Daily focus</h3>
+          </div>
           {topTasks.length === 0 ? (
             <div className="empty-box">No active priorities yet. Add a task to get started.</div>
           ) : (
@@ -170,7 +217,10 @@ export default function App() {
         </div>
 
         <div className="panel-block">
-          <h3>Upcoming schedule</h3>
+          <div className="panel-header">
+            <span className="panel-icon spark"><Icon name="spark" /></span>
+            <h3>Upcoming schedule</h3>
+          </div>
           {upcomingActs.length === 0 ? (
             <div className="empty-box">No upcoming activities.</div>
           ) : (
@@ -243,7 +293,7 @@ export default function App() {
     <div className="wrap">
       <aside className="sidebar">
         <div className="brand">
-          <img src={logoUrl} alt="Daily Planner logo" className="brand-logo" />
+          <img src="/logo.png" alt="Daily Planner logo" className="brand-logo" />
           <div className="brand-text">
             <strong>Daily Planner</strong>
             <small>Focus board</small>
@@ -252,10 +302,10 @@ export default function App() {
 
         <nav className="side-nav" aria-label="Sidebar navigation">
           {[
-            { id: "overview", label: "Overview" },
-            { id: "tasks", label: "Tasks" },
-            { id: "activities", label: "Activities" },
-            { id: "notes", label: "Notes" },
+            { id: "overview", label: "Overview", icon: "overview" },
+            { id: "tasks", label: "Tasks", icon: "tasks" },
+            { id: "activities", label: "Activities", icon: "activities" },
+            { id: "notes", label: "Notes", icon: "notes" },
           ].map((item) => (
             <button
               key={item.id}
@@ -263,6 +313,7 @@ export default function App() {
               type="button"
               onClick={() => setSelectedView(item.id)}
             >
+              <span className="nav-icon"><Icon name={item.icon} /></span>
               {item.label}
             </button>
           ))}
@@ -279,6 +330,12 @@ export default function App() {
           <strong>{pct}%</strong>
           <small>{done} completed</small>
         </div>
+
+        <div className="sidebar-footer">
+          <button className="icon-btn" type="button" aria-label="Settings">⚙</button>
+          <button className="icon-btn" type="button" aria-label="Toggle theme" onClick={toggleTheme}>{themeGlyph}</button>
+          <button className="icon-btn" type="button" aria-label="Open today view" onClick={() => setCurrent(today)}>↩</button>
+        </div>
       </aside>
 
       <main className="main-panel">
@@ -292,21 +349,20 @@ export default function App() {
           <div className="header-tools">
             <div className="nav top-controls">
               <div className="clock-box" aria-live="polite">
-                <span>Time</span>
+                <span className="clock-icon"><Icon name="clock" /></span>
                 <strong>{timeLabel}</strong>
               </div>
               <button className="btn" aria-label="Previous day" onClick={() => setCurrent(addDays(current, -1))}>‹</button>
               <button className="btn primary" onClick={() => setCurrent(today)}>Today</button>
               <button className="btn" aria-label="Next day" onClick={() => setCurrent(addDays(current, 1))}>›</button>
-              <button className="btn" aria-label="Toggle dark mode" onClick={toggleTheme}>◐</button>
+              <button className="btn" aria-label="Toggle dark mode" onClick={toggleTheme}>{themeGlyph}</button>
             </div>
           </div>
         </header>
 
         <WeekStrip current={current} onSelect={setCurrent} tasks={tasks} acts={acts} />
 
-        <div className="prog" aria-hidden="true"><div style={{ width: pct + "%" }} /></div>
-        <div className="sub">
+        <div className="sub subtle-line">
           {dayTasks.length === 0 ? "No tasks planned for this day."
             : done === dayTasks.length ? `All ${dayTasks.length} tasks done.`
             : `${dayTasks.length - done} of ${dayTasks.length} tasks left.`}

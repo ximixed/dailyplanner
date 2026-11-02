@@ -49,7 +49,7 @@ export default function ActivityList({ acts, onAdd, onUpdate, onDelete }) {
 
   return (
     <section aria-labelledby="h-acts">
-      <h2 id="h-acts">School activities{acts.length > 0 && <span>{acts.length}</span>}</h2>
+      <h2 id="h-acts"><span className="section-icon activity-icon">▣</span>School activities{acts.length > 0 && <span>{acts.length}</span>}</h2>
       <form onSubmit={submit}>
         <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Math quiz, Chess club" aria-label="Activity" required />
