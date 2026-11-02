@@ -1011,14 +1011,6 @@ export default function App() {
                 </button>
               </>
             )}
-            <button
-              className="btn sm icon-only"
-              onClick={toggleTheme}
-              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            >
-              {theme === "dark" ? ICONS.sun : ICONS.moon}
-            </button>
           </div>
         </div>
 
