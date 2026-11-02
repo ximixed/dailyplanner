@@ -274,7 +274,6 @@ export default function App() {
   const [showCmdPalette, setShowCmdPalette] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // ── Derived ──
   const dayTasks = useMemo(() => tasks.filter(t => t.date === current && !t.archived), [tasks, current]);
@@ -366,31 +365,11 @@ export default function App() {
         setShowCmdPalette(false);
         setShowQuickAdd(false);
         setShowNotifs(false);
-        setMobileMenuOpen(false);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
-
-  // ── Auto-close mobile menu on desktop resize ──
-  useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth > 900) setMobileMenuOpen(false);
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  // ── Body lock when mobile menu is open ──
-  useEffect(() => {
-    if (mobileMenuOpen && window.innerWidth <= 900) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [mobileMenuOpen]);
 
   // ── Exam notifications ──
   useEffect(() => {
@@ -612,10 +591,7 @@ export default function App() {
     announce(`${next === "dark" ? "Dark" : "Light"} mode`);
   };
 
-  const navigateTo = (view) => {
-    setSelectedView(view);
-    setMobileMenuOpen(false);
-  };
+  const navigateTo = (view) => setSelectedView(view);
 
   // ── Quick note in dashboard ──
   const [quickNote, setQuickNote] = useState("");
@@ -955,21 +931,11 @@ export default function App() {
       <main className="main-panel">
         {/* Mobile top bar — compact header with quick actions */}
         <div className="mobile-topbar">
-          <div className="mobile-topbar-left">
-            <button
-              className="mobile-menu-trigger"
-              type="button"
-              aria-label="Open menu"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              {ICONS.menu}
-            </button>
-            <div className="mobile-brand">
-              <img src="/logo.png" alt="" className="brand-logo" />
-              <div className="mobile-brand-text">
-                <strong>Daily Planner</strong>
-                <small>{VIEW_TITLES[selectedView] || pageTitle}</small>
-              </div>
+          <div className="mobile-brand">
+            <img src="/logo.png" alt="" className="brand-logo" />
+            <div className="mobile-brand-text">
+              <strong>Daily Planner</strong>
+              <small>{VIEW_TITLES[selectedView] || pageTitle}</small>
             </div>
           </div>
           <div className="mobile-topbar-actions">
@@ -1054,135 +1020,6 @@ export default function App() {
         {/* Content */}
         <div ref={contentRef}>{renderView()}</div>
       </main>
-
-      {/* ── Mobile Navigation Drawer ── */}
-      <div
-        className={`mobile-menu-backdrop${mobileMenuOpen ? " open" : ""}`}
-        onClick={() => setMobileMenuOpen(false)}
-        aria-hidden={!mobileMenuOpen}
-      />
-
-      <aside
-        className={`mobile-menu-drawer${mobileMenuOpen ? " open" : ""}`}
-        aria-label="Mobile Navigation Menu"
-        aria-hidden={!mobileMenuOpen}
-      >
-        <div className="mobile-menu-header">
-          <div className="mobile-menu-brand">
-            <img src="/logo.png" alt="" className="brand-logo" style={{ width: 30, height: 30, borderRadius: 8 }} />
-            <div className="brand-text">
-              <strong style={{ fontSize: "0.95rem", color: "var(--ink)" }}>Daily Planner</strong>
-              <small style={{ fontSize: "0.72rem", color: "var(--muted)" }}>Focus board</small>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="mobile-menu-close"
-            aria-label="Close menu"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            {ICONS.x}
-          </button>
-        </div>
-
-        <nav className="mobile-menu-nav">
-          {NAV_SECTIONS.map(section => (
-            <div key={section.label} className="mobile-menu-section">
-              <div className="mobile-menu-section-title">{section.label}</div>
-              <div className="mobile-menu-items">
-                {section.items.map(item => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`mobile-menu-item${selectedView === item.id ? " active" : ""}`}
-                    onClick={() => navigateTo(item.id)}
-                    aria-current={selectedView === item.id ? "page" : undefined}
-                  >
-                    <span className="mobile-menu-icon">{ICONS[item.icon]}</span>
-                    <span className="mobile-menu-label">{item.label}</span>
-                    {item.id === "tasks" && overdueTasks.length > 0 && (
-                      <span className="nav-badge">{overdueTasks.length}</span>
-                    )}
-                    {item.id === "focus" && todayFocusSessions.length > 0 && (
-                      <span className="mobile-menu-sub">{todayFocusSessions.length} done</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        <div className="mobile-menu-footer">
-          <div className="mobile-menu-stat">
-            <span className="mobile-menu-stat-label">Streak</span>
-            <span className="mobile-menu-stat-val">🔥 {streak.current}d</span>
-          </div>
-          <div className="mobile-menu-stat">
-            <span className="mobile-menu-stat-label">Tasks</span>
-            <span className="mobile-menu-stat-val">{allTodayTasks.filter(t => t.done).length}/{allTodayTasks.length}</span>
-          </div>
-          <button
-            type="button"
-            className="mobile-menu-theme-btn"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Mobile Bottom Navigation Bar (clean quick tabs) ── */}
-      <nav className="mobile-bottom-nav" aria-label="Mobile bottom navigation">
-        <button
-          type="button"
-          className={`mobile-tab-btn${selectedView === "overview" && !mobileMenuOpen ? " active" : ""}`}
-          onClick={() => navigateTo("overview")}
-        >
-          <span className="mobile-tab-icon">{ICONS.overview}</span>
-          <span className="mobile-tab-label">Dashboard</span>
-        </button>
-        <button
-          type="button"
-          className={`mobile-tab-btn${selectedView === "tasks" && !mobileMenuOpen ? " active" : ""}`}
-          onClick={() => navigateTo("tasks")}
-        >
-          <span className="mobile-tab-icon" style={{ position: "relative" }}>
-            {ICONS.tasks}
-            {overdueTasks.length > 0 && (
-              <span className="tab-badge">{overdueTasks.length}</span>
-            )}
-          </span>
-          <span className="mobile-tab-label">Tasks</span>
-        </button>
-        <button
-          type="button"
-          className={`mobile-tab-btn${selectedView === "focus" && !mobileMenuOpen ? " active" : ""}`}
-          onClick={() => navigateTo("focus")}
-        >
-          <span className="mobile-tab-icon">{ICONS.focus}</span>
-          <span className="mobile-tab-label">Focus</span>
-        </button>
-        <button
-          type="button"
-          className={`mobile-tab-btn${selectedView === "calendar" && !mobileMenuOpen ? " active" : ""}`}
-          onClick={() => navigateTo("calendar")}
-        >
-          <span className="mobile-tab-icon">{ICONS.calendar}</span>
-          <span className="mobile-tab-label">Calendar</span>
-        </button>
-        <button
-          type="button"
-          className={`mobile-tab-btn${mobileMenuOpen || !["overview", "tasks", "focus", "calendar"].includes(selectedView) ? " active" : ""}`}
-          onClick={() => setMobileMenuOpen(s => !s)}
-          aria-expanded={mobileMenuOpen}
-          aria-label="All menus"
-        >
-          <span className="mobile-tab-icon">{mobileMenuOpen ? ICONS.x : ICONS.menu}</span>
-          <span className="mobile-tab-label">Menu</span>
-        </button>
-      </nav>
 
       {/* ── Overlays ── */}
 
