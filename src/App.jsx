@@ -359,7 +359,11 @@ export default function App() {
   useEffect(() => {
     const handler = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") { e.preventDefault(); setShowCmdPalette(s => !s); }
-      if (e.key === "Escape") { setShowCmdPalette(false); setShowQuickAdd(false); setShowNotifs(false); }
+      if (e.key === "Escape") {
+        setShowCmdPalette(false);
+        setShowQuickAdd(false);
+        setShowNotifs(false);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -921,7 +925,7 @@ export default function App() {
 
       {/* ── Main ── */}
       <main className="main-panel">
-        {/* Mobile top bar — only visible on mobile, replaces sidebar-footer icons */}
+        {/* Mobile top bar — compact header with quick actions */}
         <div className="mobile-topbar">
           <div className="mobile-brand">
             <img src="/logo.png" alt="" className="brand-logo" style={{ width: 28, height: 28, borderRadius: 8 }} />

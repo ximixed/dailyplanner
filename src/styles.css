@@ -1422,11 +1422,9 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
 
 /* ── Mobile: 900px — bottom nav bar ── */
 @media (max-width: 900px) {
-  /* Reset page flow */
   html, body, #root { height: auto; min-height: 100%; }
   body { overflow-x: hidden; }
 
-  /* ── Layout: sidebar becomes bottom tab bar ── */
   .wrap {
     flex-direction: column;
     height: auto;
@@ -1451,18 +1449,17 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
     border-top: 1px solid var(--line);
     background: var(--sidebar-bg);
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.45);
-    /* safe area for iOS home indicator */
     padding-bottom: env(safe-area-inset-bottom, 0px);
     box-sizing: content-box;
   }
 
-  /* Hide brand + section labels + sidebar stats + footer in mobile sidebar */
+  /* Hide brand, section labels, stats, footer on mobile bottom bar */
   .brand         { display: none; }
   .nav-section-label { display: none; }
   .sidebar-stats { display: none; }
   .sidebar-footer { display: none; }
 
-  /* Nav becomes a single horizontal tab bar */
+  /* Nav becomes a horizontal scrollable row */
   .side-nav {
     display: flex;
     flex-direction: row;
@@ -1475,23 +1472,15 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
     -ms-overflow-style: none;
     align-items: stretch;
     -webkit-overflow-scrolling: touch;
-    width: 100%;
   }
   .side-nav::-webkit-scrollbar { display: none; }
 
-  /* Flatten section groups into one consistent row on mobile */
   .side-nav > div {
     display: flex;
     flex-direction: row;
-    flex: 1 0 auto;
-    align-items: stretch;
-    min-width: max-content;
-  }
-  .side-nav > div > .nav-section-label {
-    display: none;
+    flex-shrink: 0;
   }
 
-  /* Each nav item in the bottom bar */
   .nav-item {
     flex: 0 0 auto;
     flex-direction: column;
@@ -1528,7 +1517,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
     background: var(--danger);
     color: #fff;
   }
-  /* Active indicator line at top of tab */
   .nav-item.active::before {
     content: '';
     position: absolute;
@@ -1566,7 +1554,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
     box-sizing: border-box;
   }
 
-  /* ── Page header ── */
   .page-header {
     flex-direction: column;
     align-items: stretch;
@@ -1587,7 +1574,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   .page-subtitle { font-size: 0.8rem; }
   .clock-box    { font-size: 0.8rem; padding: 4px 10px; }
 
-  /* ── Week strip ── */
   .week { gap: 3px; margin-bottom: 12px; }
   .wd   { min-height: 54px; padding: 5px 2px; border-radius: var(--r-md); }
   .wd small { font-size: 0.58rem; }
@@ -1595,24 +1581,17 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   .wd .dot-row { bottom: 4px; gap: 2px; }
   .wd .dot-row span { width: 3px; height: 3px; }
 
-  /* ── Stat grid: 2 columns ── */
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .stat-card  { padding: 12px; }
   .stat-value { font-size: 1.6rem; }
   .stat-sub   { font-size: 0.7rem; }
   .stat-icon  { width: 32px; height: 32px; }
 
-  /* ── Dashboard ── */
   .focus-grid       { grid-template-columns: 1fr; gap: 10px; }
   .dashboard-bottom { grid-template-columns: 1fr; gap: 10px; }
 
-  /* ── Quick note ── */
   .quick-notes-input { min-height: 64px; }
 
-  /* ── Kanban ── */
-  .kanban-board { grid-template-columns: 1fr; }
-
-  /* ── Task list ── */
   .task-field-row { flex-direction: column; }
   .task-field-row > * { min-width: 0 !important; }
   .task-toolbar   { flex-wrap: wrap; gap: 6px; }
@@ -1624,14 +1603,12 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   .task-item      { padding: 10px 12px; gap: 8px; }
   .task-title     { font-size: 0.88rem; }
 
-  /* ── Focus timer ── */
   .focus-page      { padding: 0 0 20px; }
   .focus-ring-wrap { width: 210px; height: 210px; }
   .focus-time      { font-size: 3.2rem; }
   .focus-controls  { gap: 8px; flex-wrap: wrap; justify-content: center; }
   .focus-controls .btn { padding: 9px 16px; font-size: 0.85rem; }
 
-  /* ── Calendar ── */
   .calendar-nav { flex-wrap: wrap; gap: 8px; align-items: center; }
   .calendar-nav h2 { width: 100%; order: -1; font-size: 1.05rem; text-align: center; }
   .cal-view-tabs { flex: 1; display: flex; justify-content: center; }
@@ -1643,7 +1620,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   }
   .cal-week-grid { font-size: 0.78rem; }
 
-  /* ── Notification panel ── */
   .notif-panel {
     position: fixed;
     top: auto;
@@ -1655,7 +1631,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
   }
 
-  /* ── Command palette ── */
   .cmd-overlay { padding-top: 4vh; align-items: flex-start; }
   .cmd-box {
     width: calc(100vw - 20px);
@@ -1666,7 +1641,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   .cmd-input  { font-size: 0.95rem; }
   .cmd-footer { display: none; }
 
-  /* ── Modal ── */
   .modal-overlay { align-items: flex-end; padding: 0; }
   .modal-box {
     border-radius: var(--r-xl) var(--r-xl) 0 0;
@@ -1683,24 +1657,20 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
     to   { transform: translateY(0);    opacity: 1; }
   }
 
-  /* ── Analytics ── */
   .analytics-grid { grid-template-columns: 1fr; gap: 12px; }
   .analytics-chart-wrap { height: 160px; }
 
-  /* ── Student Hub ── */
   .student-tabs   { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .student-tabs::-webkit-scrollbar { display: none; }
   .student-tab    { flex-shrink: 0; font-size: 0.78rem; padding: 7px 12px; }
   .exam-card      { padding: 12px; }
   .exam-header    { flex-wrap: wrap; gap: 6px; }
 
-  /* ── Habit Tracker ── */
   .habit-card-top  { flex-wrap: wrap; }
   .habit-card-actions { margin-right: 0; justify-content: flex-end; width: 100%; padding: 0 16px 12px; }
   .habit-week-grid { font-size: 0.72rem; }
   .habit-week-name { max-width: 80px; font-size: 0.7rem; }
 
-  /* ── Reflection ── */
   .reflection-layout     { grid-template-columns: 1fr; }
   .reflection-history-top { flex-direction: column; }
   .mood-picker { gap: 4px; }
@@ -1708,7 +1678,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   .mood-emoji  { font-size: 1.2rem; }
   .mood-label  { font-size: 0.55rem; }
 
-  /* ── Settings ── */
   .settings-row { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
   .settings-row-info { width: 100%; }
   .settings-row select,
@@ -1716,25 +1685,21 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   .settings-row input[type="number"] { width: 100% !important; }
   .settings-section-body .settings-row:last-child { border-bottom: none; }
 
-  /* ── Daily Planner ── */
   .planning-summary { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .suggestion-card  { flex-direction: column; align-items: stretch; gap: 10px; }
   .suggestion-card-left { flex-direction: column; align-items: flex-start; gap: 8px; }
   .suggestion-actions { width: 100%; justify-content: flex-end; }
 
-  /* ── Section header ── */
   .section-header-row { flex-direction: column; gap: 10px; }
   .section-header-row > .btn,
   .section-header-row > button { align-self: flex-start; }
 
-  /* ── Quick-add FAB ── */
   .quick-add-fab {
     bottom: calc(74px + env(safe-area-inset-bottom, 0px));
     right: 14px;
     width: 48px; height: 48px;
   }
 
-  /* ── Undo toast ── */
   .undo-toast {
     bottom: calc(74px + env(safe-area-inset-bottom, 0px) + 8px);
     left: 12px; right: 12px;
@@ -1745,7 +1710,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
     padding: 8px 12px;
   }
 
-  /* ── View tabs (habit/reflection) ── */
   .view-tabs {
     width: 100%;
     overflow-x: auto;
@@ -1754,14 +1718,11 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   }
   .view-tabs::-webkit-scrollbar { display: none; }
 
-  /* ── Status banner ── */
   .status-banner { font-size: 0.82rem; padding: 8px 14px; }
 
-  /* ── Goals ── */
   .goals-grid { grid-template-columns: 1fr !important; }
 }
 
-/* ── Small mobile: 540px ── */
 @media (max-width: 540px) {
   .task-item {
     flex-wrap: wrap;
@@ -1839,11 +1800,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   .focus-ring-wrap { width: 160px; height: 160px; }
   .focus-time      { font-size: 2.5rem; }
   .sidebar         { padding-bottom: 0; }
-}
-
-/* ── Student tabs responsive ── */
-@media (max-width: 540px) {
-  .kanban-board { grid-template-columns: 1fr; }
 }
 /* Extra polish appended to styles.css */
 
