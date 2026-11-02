@@ -1531,32 +1531,6 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
     text-align: center;
   }
 
-  /* ── Mobile top bar menu button ── */
-  .mobile-topbar-menu-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    border: 1px solid var(--line);
-    background: var(--elevated);
-    color: var(--ink);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-    flex-shrink: 0;
-    transition: background 0.15s, border-color 0.15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .mobile-topbar-menu-btn:hover,
-  .mobile-topbar-menu-btn:active {
-    background: var(--field-bg);
-    border-color: var(--accent);
-  }
-  .mobile-topbar-menu-btn svg {
-    width: 18px;
-    height: 18px;
-  }
 
   /* ── Mobile Navigation Sheet Modal ── */
   .mobile-nav-modal {

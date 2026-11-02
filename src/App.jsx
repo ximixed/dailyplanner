@@ -956,15 +956,6 @@ export default function App() {
         {/* Mobile top bar — compact header with quick actions */}
         <div className="mobile-topbar">
           <div className="mobile-brand">
-            <button
-              className="mobile-topbar-menu-btn"
-              type="button"
-              onClick={() => setMobileNavOpen(true)}
-              aria-label="Open menu"
-              title="Open menu"
-            >
-              {ICONS.menu}
-            </button>
             <img src="/logo.png" alt="" className="brand-logo" />
             <div className="mobile-brand-text">
               <strong>Daily Planner</strong>
