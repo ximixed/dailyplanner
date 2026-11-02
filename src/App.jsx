@@ -322,7 +322,8 @@ export default function App() {
       ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
       : (settings.theme || theme || "dark");
     document.documentElement.setAttribute("data-theme", t);
-  }, [settings.theme, theme]);
+    setTheme(t);
+  }, [settings.theme]);
 
   // ── Streak tracking ──
   useEffect(() => {
@@ -603,9 +604,11 @@ export default function App() {
   }, []);
 
   const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
+    const active = document.documentElement.getAttribute("data-theme") || theme || "dark";
+    const next = active === "dark" ? "light" : "dark";
     setTheme(next);
     updateSettings(prev => ({ ...prev, theme: next }));
+    document.documentElement.setAttribute("data-theme", next);
     announce(`${next === "dark" ? "Dark" : "Light"} mode`);
   };
 
@@ -1018,8 +1021,13 @@ export default function App() {
                 </button>
               </>
             )}
-            <button className="btn sm" onClick={toggleTheme} aria-label="Toggle theme">
-              {theme === "dark" ? "☀" : "☾"}
+            <button
+              className="btn sm icon-only"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            >
+              {theme === "dark" ? ICONS.sun : ICONS.moon}
             </button>
           </div>
         </div>
