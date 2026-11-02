@@ -1462,7 +1462,7 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
   .sidebar-stats { display: none; }
   .sidebar-footer { display: none; }
 
-  /* Nav becomes a horizontal scrollable row */
+  /* Nav becomes a single horizontal tab bar */
   .side-nav {
     display: flex;
     flex-direction: row;
@@ -1475,14 +1475,20 @@ h2 .count { font-size: 0.82rem; color: var(--muted); font-weight: 600; backgroun
     -ms-overflow-style: none;
     align-items: stretch;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
   }
   .side-nav::-webkit-scrollbar { display: none; }
 
-  /* Critical: unwrap sections so nav items flow horizontally */
+  /* Flatten section groups into one consistent row on mobile */
   .side-nav > div {
     display: flex;
     flex-direction: row;
-    flex-shrink: 0;
+    flex: 1 0 auto;
+    align-items: stretch;
+    min-width: max-content;
+  }
+  .side-nav > div > .nav-section-label {
+    display: none;
   }
 
   /* Each nav item in the bottom bar */
