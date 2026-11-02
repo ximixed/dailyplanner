@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { toISO, uid } from "../utils/dates.js";
+import {
+  unlockAudio,
+  playPattern,
+  startRingtone,
+  stopRingtone,
+  RINGTONE_OPTIONS,
+} from "../utils/focusSound.js";
 
 const MODES = {
   focus:      { label: "Focus",       duration: 25, color: "var(--accent)" },
@@ -10,17 +17,56 @@ const MODES = {
 const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 const CIRCUMFERENCE = 2 * Math.PI * 110; // radius 110
 
-export default function FocusTimer({ tasks, sessions, onSessionComplete, settings, onSettingsChange }) {
+export default function FocusTimer({ tasks = [], sessions = [], onSessionComplete, settings }) {
   const [mode, setMode] = useState("focus");
   const [custom, setCustom] = useState({ focus: 25, short: 5, long: 15 });
   const [running, setRunning] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState((settings?.focusMins || 25) * 60);
   const [selectedTaskId, setSelectedTaskId] = useState("");
-  const [showSettings, setShowSettings] = useState(false);
-  const [todaySessions, setTodaySessions] = useState(0);
   const [dailyGoal, setDailyGoal] = useState(settings?.dailyGoal || 4);
   const intervalRef = useRef(null);
   const today = toISO(new Date());
+
+  // Ringtone / Phone Alarm states
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try {
+      const stored = localStorage.getItem("planner:focus-sound-enabled");
+      return stored !== null ? JSON.parse(stored) : true;
+    } catch { return true; }
+  });
+  const [selectedRingtone, setSelectedRingtone] = useState(() => {
+    try {
+      return localStorage.getItem("planner:focus-ringtone") || "marimba";
+    } catch { return "marimba"; }
+  });
+  const [volume, setVolume] = useState(() => {
+    try {
+      const stored = localStorage.getItem("planner:focus-volume");
+      return stored !== null ? Number(stored) : 0.8;
+    } catch { return 0.8; }
+  });
+  const [isRinging, setIsRinging] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+
+  // Sync ringtone settings to localStorage
+  useEffect(() => {
+    try { localStorage.setItem("planner:focus-sound-enabled", JSON.stringify(soundEnabled)); } catch {}
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    try { localStorage.setItem("planner:focus-ringtone", selectedRingtone); } catch {}
+  }, [selectedRingtone]);
+
+  useEffect(() => {
+    try { localStorage.setItem("planner:focus-volume", String(volume)); } catch {}
+  }, [volume]);
+
+  // Clean up ringtone when component unmounts
+  useEffect(() => {
+    return () => {
+      stopRingtone();
+    };
+  }, []);
 
   const totalDuration = (custom[mode] || MODES[mode].duration) * 60;
   const progress = 1 - secondsLeft / totalDuration;
@@ -29,8 +75,14 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
   const totalFocusMin = Math.round(todayFocus.reduce((acc, s) => acc + (s.duration || 0), 0) / 60);
   const completedFocusSessions = todayFocus.length;
 
+  const handleStopRingtone = () => {
+    stopRingtone();
+    setIsRinging(false);
+  };
+
   useEffect(() => {
     const mins = custom[mode] || MODES[mode].duration;
+    handleStopRingtone();
     setSecondsLeft(mins * 60);
     setRunning(false);
   }, [mode]);
@@ -66,7 +118,18 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
       taskTitle: task?.title || "",
       completedAt: new Date().toISOString(),
     });
-    // browser notification
+
+    // Ring alarm sound like a mobile phone timer
+    if (soundEnabled) {
+      startRingtone({
+        soundId: selectedRingtone,
+        volume,
+        onAutoStop: () => setIsRinging(false),
+      });
+      setIsRinging(true);
+    }
+
+    // Browser notification
     if (Notification.permission === "granted") {
       new Notification(mode === "focus" ? "🎯 Focus session complete!" : "⏰ Break time over!", {
         body: mode === "focus" ? "Great work! Take a well-deserved break." : "Ready to focus again?",
@@ -75,7 +138,15 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
     }
   };
 
+  const handleStartResume = () => {
+    unlockAudio();
+    requestNotifPermission();
+    handleStopRingtone();
+    setRunning(true);
+  };
+
   const reset = () => {
+    handleStopRingtone();
     setRunning(false);
     setSecondsLeft((custom[mode] || MODES[mode].duration) * 60);
   };
@@ -84,6 +155,14 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
+  };
+
+  const handlePreviewSound = () => {
+    unlockAudio();
+    handleStopRingtone();
+    setIsPreviewing(true);
+    playPattern(selectedRingtone, volume);
+    setTimeout(() => setIsPreviewing(false), 1200);
   };
 
   const activeTasks = tasks.filter(t => !t.done);
@@ -101,8 +180,27 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
         ))}
       </div>
 
+      {/* Ringing Alarm Alert (Phone-like UI) */}
+      {isRinging && (
+        <div className="focus-alarm-banner" role="alert">
+          <div className="alarm-pulse-icon">🔔</div>
+          <div className="alarm-info">
+            <strong>Time’s Up! Ringing...</strong>
+            <span>{mode === "focus" ? "Focus session finished! Time for a rest." : "Break is over! Ready to focus?"}</span>
+          </div>
+          <button
+            type="button"
+            className="btn primary alarm-stop-btn"
+            onClick={handleStopRingtone}
+            aria-label="Stop ringtone"
+          >
+            ⏹ Stop Ringtone
+          </button>
+        </div>
+      )}
+
       {/* Timer ring */}
-      <div className="focus-ring-wrap">
+      <div className={`focus-ring-wrap${isRinging ? " ringing" : ""}`}>
         <svg className="focus-ring-svg" viewBox="0 0 240 240">
           <circle className="focus-ring-bg" cx="120" cy="120" r="110" />
           <circle
@@ -118,7 +216,7 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
             {fmt(secondsLeft)}
           </div>
           <div className="focus-mode-label" style={{ color: strokeColor }}>
-            {secondsLeft === 0 ? "Complete! 🎉" : running ? "In progress" : "Ready"}
+            {isRinging ? "🔔 Ringing..." : secondsLeft === 0 ? "Complete! 🎉" : running ? "In progress" : "Ready"}
           </div>
           <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: 6 }}>
             {MODES[mode].label} · {custom[mode] || MODES[mode].duration} min
@@ -128,8 +226,12 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
 
       {/* Controls */}
       <div className="focus-controls">
-        {!running ? (
-          <button className="btn lg primary" onClick={() => { requestNotifPermission(); setRunning(true); }}>
+        {isRinging ? (
+          <button className="btn lg primary alarm-stop-pulse" onClick={handleStopRingtone}>
+            ⏹ Stop Ringtone
+          </button>
+        ) : !running ? (
+          <button className="btn lg primary" onClick={handleStartResume}>
             {secondsLeft === totalDuration ? "▶ Start" : "▶ Resume"}
           </button>
         ) : (
@@ -137,10 +239,39 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
         )}
         <button className="btn lg" onClick={reset}>↺ Reset</button>
         {secondsLeft === 0 && (
-          <button className="btn lg success" onClick={() => { setMode(mode === "focus" ? "short" : "focus"); }}>
+          <button
+            className="btn lg success"
+            onClick={() => {
+              handleStopRingtone();
+              setMode(mode === "focus" ? "short" : "focus");
+            }}
+          >
             {mode === "focus" ? "Take break →" : "Start focus →"}
           </button>
         )}
+        <button
+          type="button"
+          className={`btn lg icon-only ${soundEnabled ? "accent" : ""}`}
+          onClick={() => {
+            unlockAudio();
+            setSoundEnabled(s => !s);
+          }}
+          title={soundEnabled ? "Ringtone sound: ON (Click to mute)" : "Ringtone sound: MUTED (Click to unmute)"}
+          aria-label={soundEnabled ? "Mute ringtone sound" : "Enable ringtone sound"}
+        >
+          {soundEnabled ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 18, height: 18 }}>
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 18, height: 18 }}>
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          )}
+        </button>
       </div>
 
       {/* Stats row */}
@@ -187,13 +318,86 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
         )}
       </div>
 
+      {/* Phone Ringtone Settings */}
+      <div className="panel-block" style={{ width: "100%" }}>
+        <div className="panel-header">
+          <span className="panel-icon accent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ width: 18, height: 18 }}>
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          </span>
+          <h3>Timer Ringtone</h3>
+        </div>
+        <p style={{ fontSize: "0.82rem", color: "var(--muted)", margin: "0 0 12px" }}>
+          Plays an audible ringtone when the timer finishes, just like a mobile phone timer app.
+        </p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div className="field" style={{ flex: "2 1 200px" }}>
+            <label>Ringtone sound</label>
+            <select
+              value={selectedRingtone}
+              onChange={e => {
+                const val = e.target.value;
+                setSelectedRingtone(val);
+                unlockAudio();
+                playPattern(val, volume);
+              }}
+              aria-label="Select timer ringtone sound"
+            >
+              {RINGTONE_OPTIONS.map(opt => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field" style={{ flex: "1 1 120px" }}>
+            <label>Volume</label>
+            <select
+              value={volume}
+              onChange={e => {
+                const v = Number(e.target.value);
+                setVolume(v);
+                unlockAudio();
+                playPattern(selectedRingtone, v);
+              }}
+              aria-label="Select ringtone volume"
+            >
+              <option value={0.4}>Quiet (40%)</option>
+              <option value={0.7}>Medium (70%)</option>
+              <option value={1.0}>Loud (100%)</option>
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
+            <button
+              type="button"
+              className="btn sm"
+              onClick={handlePreviewSound}
+              disabled={isPreviewing}
+              title="Test this ringtone now"
+            >
+              {isPreviewing ? "🔊 Playing..." : "▶ Test Ringtone"}
+            </button>
+            <button
+              type="button"
+              className={`btn sm ${soundEnabled ? "primary" : ""}`}
+              onClick={() => {
+                unlockAudio();
+                setSoundEnabled(s => !s);
+              }}
+            >
+              {soundEnabled ? "✓ Sound Enabled" : "✕ Sound Muted"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Custom durations */}
       <div className="panel-block" style={{ width: "100%" }}>
         <div className="panel-header">
           <span className="panel-icon accent">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 4v4M12 16v4M4 12h4M16 12h4"/></svg>
           </span>
-          <h3>Timer settings</h3>
+          <h3>Timer durations</h3>
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           {Object.entries({ focus: "Focus (min)", short: "Short break (min)", long: "Long break (min)" }).map(([key, label]) => (
@@ -242,4 +446,3 @@ export default function FocusTimer({ tasks, sessions, onSessionComplete, setting
     </div>
   );
 }
-
