@@ -274,6 +274,7 @@ export default function App() {
   const [showCmdPalette, setShowCmdPalette] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // ── Derived ──
   const dayTasks = useMemo(() => tasks.filter(t => t.date === current && !t.archived), [tasks, current]);
@@ -365,11 +366,31 @@ export default function App() {
         setShowCmdPalette(false);
         setShowQuickAdd(false);
         setShowNotifs(false);
+        setMobileNavOpen(false);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  // ── Auto-close mobile sheet on desktop resize ──
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth > 900) setMobileNavOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // ── Body scroll lock when mobile sheet is open ──
+  useEffect(() => {
+    if (mobileNavOpen && window.innerWidth <= 900) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileNavOpen]);
 
   // ── Exam notifications ──
   useEffect(() => {
@@ -591,7 +612,10 @@ export default function App() {
     announce(`${next === "dark" ? "Dark" : "Light"} mode`);
   };
 
-  const navigateTo = (view) => setSelectedView(view);
+  const navigateTo = (view) => {
+    setSelectedView(view);
+    setMobileNavOpen(false);
+  };
 
   // ── Quick note in dashboard ──
   const [quickNote, setQuickNote] = useState("");
@@ -932,6 +956,15 @@ export default function App() {
         {/* Mobile top bar — compact header with quick actions */}
         <div className="mobile-topbar">
           <div className="mobile-brand">
+            <button
+              className="mobile-topbar-menu-btn"
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              aria-label="Open menu"
+              title="Open menu"
+            >
+              {ICONS.menu}
+            </button>
             <img src="/logo.png" alt="" className="brand-logo" />
             <div className="mobile-brand-text">
               <strong>Daily Planner</strong>
@@ -1020,6 +1053,132 @@ export default function App() {
         {/* Content */}
         <div ref={contentRef}>{renderView()}</div>
       </main>
+
+      {/* ── Mobile Bottom Navigation Bar (5 clean tabs, perfectly spaced without scrolling) ── */}
+      <nav className="mobile-bottom-bar" aria-label="Mobile navigation">
+        <button
+          type="button"
+          className={`mobile-tab${selectedView === "overview" && !mobileNavOpen ? " active" : ""}`}
+          onClick={() => navigateTo("overview")}
+        >
+          <span className="mobile-tab-icon">{ICONS.overview}</span>
+          <span className="mobile-tab-label">Dashboard</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-tab${selectedView === "tasks" && !mobileNavOpen ? " active" : ""}`}
+          onClick={() => navigateTo("tasks")}
+        >
+          <span className="mobile-tab-icon" style={{ position: "relative" }}>
+            {ICONS.tasks}
+            {overdueTasks.length > 0 && <span className="tab-badge">{overdueTasks.length}</span>}
+          </span>
+          <span className="mobile-tab-label">Tasks</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-tab${selectedView === "calendar" && !mobileNavOpen ? " active" : ""}`}
+          onClick={() => navigateTo("calendar")}
+        >
+          <span className="mobile-tab-icon">{ICONS.calendar}</span>
+          <span className="mobile-tab-label">Calendar</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-tab${selectedView === "focus" && !mobileNavOpen ? " active" : ""}`}
+          onClick={() => navigateTo("focus")}
+        >
+          <span className="mobile-tab-icon">{ICONS.focus}</span>
+          <span className="mobile-tab-label">Focus</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-tab${mobileNavOpen || !["overview", "tasks", "calendar", "focus"].includes(selectedView) ? " active" : ""}`}
+          onClick={() => setMobileNavOpen(s => !s)}
+          aria-expanded={mobileNavOpen}
+          aria-label="All menus"
+        >
+          <span className="mobile-tab-icon">{mobileNavOpen ? ICONS.x : ICONS.menu}</span>
+          <span className="mobile-tab-label">Menu</span>
+        </button>
+      </nav>
+
+      {/* ── Mobile Navigation Sheet (Organized into Main, School, Personal, System) ── */}
+      {mobileNavOpen && (
+        <div className="mobile-nav-modal" role="dialog" aria-modal="true" aria-label="Navigation menu">
+          <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} />
+          <div className="mobile-nav-sheet">
+            <div className="mobile-nav-handle-bar">
+              <div className="mobile-nav-handle" />
+            </div>
+
+            <div className="mobile-nav-sheet-header">
+              <div className="mobile-nav-sheet-title">
+                <img src="/logo.png" alt="" style={{ width: 28, height: 28, borderRadius: 8 }} />
+                <div>
+                  <strong>Navigation</strong>
+                  <small>Daily Planner</small>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="mobile-nav-close-btn"
+                onClick={() => setMobileNavOpen(false)}
+                aria-label="Close navigation"
+              >
+                {ICONS.x}
+              </button>
+            </div>
+
+            <div className="mobile-nav-sheet-content">
+              {NAV_SECTIONS.map(section => (
+                <div key={section.label} className="mobile-nav-group">
+                  <div className="mobile-nav-group-title">{section.label}</div>
+                  <div className="mobile-nav-group-items">
+                    {section.items.map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`mobile-nav-item${selectedView === item.id ? " active" : ""}`}
+                        onClick={() => navigateTo(item.id)}
+                        aria-current={selectedView === item.id ? "page" : undefined}
+                      >
+                        <span className="mobile-nav-icon">{ICONS[item.icon]}</span>
+                        <span className="mobile-nav-label">{item.label}</span>
+                        {item.id === "tasks" && overdueTasks.length > 0 && (
+                          <span className="nav-badge">{overdueTasks.length}</span>
+                        )}
+                        {item.id === "focus" && todayFocusSessions.length > 0 && (
+                          <span className="mobile-nav-sub">{todayFocusSessions.length} done</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mobile-nav-sheet-footer">
+              <div className="mobile-nav-stat">
+                <span className="mobile-nav-stat-lbl">Streak</span>
+                <span className="mobile-nav-stat-val">🔥 {streak.current}d</span>
+              </div>
+              <div className="mobile-nav-stat">
+                <span className="mobile-nav-stat-lbl">Today's Tasks</span>
+                <span className="mobile-nav-stat-val">{allTodayTasks.filter(t => t.done).length}/{allTodayTasks.length}</span>
+              </div>
+              <button
+                type="button"
+                className="btn sm"
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Overlays ── */}
 
